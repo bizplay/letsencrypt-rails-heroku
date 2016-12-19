@@ -25,57 +25,67 @@ namespace :letsencrypt do
     registration = client.register(contact: "mailto:#{Letsencrypt.configuration.acme_email}")
 
     registration.agree_terms
-    puts "Done!\n"
+    puts "Done!"
+    puts ""
 
     domains = Letsencrypt.configuration.acme_domain.split(',').map(&:strip)
 
-    domains.each do |domain|
-      puts "Performing verification for #{domain}:"
+    begin
+      domains.each do |domain|
+        puts "Performing verification for #{domain}:"
 
-      authorization = client.authorize(domain: domain)
-      challenge = authorization.http01
+        authorization = client.authorize(domain: domain)
+        challenge = authorization.http01
 
-      print "Setting config vars on Heroku..."
+        print "Setting config vars on Heroku..."
+        heroku.config_var.update(heroku_app, {
+          'ACME_CHALLENGE_FILENAME' => challenge.filename,
+          'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
+        })
+        puts "Done!"
+
+        # Wait for request to go through
+        print "Giving config vars time to change..."
+        sleep(5)
+        puts "Done!"
+
+        # Wait for app to come up
+        print "Testing filename works (to bring up app)..."
+
+        # Get the domain name from Heroku
+        hostname = heroku.domain.list(heroku_app).first['hostname']
+        open("http://#{hostname}/#{challenge.filename}").read
+        puts "Done!"
+
+        print "Giving LetsEncrypt some time to verify..."
+        # Once you are ready to serve the confirmation request you can proceed.
+        challenge.request_verification # => true
+        challenge.verify_status # => 'pending'
+
+        sleep(1)
+        count_down = 5
+        while challenge.verify_status == 'pending' && count_down > 0
+          print "\nGiving LetsEncrypt some more time (to verify)..." unless count_down == 5
+          sleep(2)
+          count_down -= 1
+        end
+
+        unless challenge.verify_status == 'valid'
+          puts  "Problem verifying challenge."
+          abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
+        else
+          puts  "Done!"
+        end
+
+        puts ""
+      end
+    rescue Acme::Client::Error => e
+      warn "Error Acme client error:"
       heroku.config_var.update(heroku_app, {
-        'ACME_CHALLENGE_FILENAME' => challenge.filename,
-        'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
+        'ACME_CHALLENGE_FILENAME' => "",
+        'ACME_CHALLENGE_FILE_CONTENT' => ""
       })
-      puts "Done!"
-
-      # Wait for request to go through
-      print "Giving config vars time to change..."
-      sleep(5)
-      puts "Done!"
-
-      # Wait for app to come up
-      print "Testing filename works (to bring up app)..."
-
-      # Get the domain name from Heroku
-      hostname = heroku.domain.list(heroku_app).first['hostname']
-      open("http://#{hostname}/#{challenge.filename}").read
-      puts "Done!"
-
-      print "Giving LetsEncrypt some time to verify..."
-      # Once you are ready to serve the confirmation request you can proceed.
-      challenge.request_verification # => true
-      challenge.verify_status # => 'pending'
-
-      sleep(1)
-      count_down = 7
-      while challenge.verify_status == 'pending' && count_down > 0
-        print "\nGiving LetsEncrypt some more time (to verify)..." unless count_down == 7
-        sleep(2)
-        count_down -= 1
-      end
-
-      unless challenge.verify_status == 'valid'
-        puts  "Problem verifying challenge."
-        abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
-      else
-        puts  "Done!"
-      end
-
-      puts ""
+      abort e.response.body
     end
 
     # Unset temporary config vars. We don't care about waiting for this to
