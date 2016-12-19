@@ -25,7 +25,7 @@ namespace :letsencrypt do
     registration = client.register(contact: "mailto:#{Letsencrypt.configuration.acme_email}")
 
     registration.agree_terms
-    puts "Done!"
+    puts "Done!\n"
 
     domains = Letsencrypt.configuration.acme_domain.split(',').map(&:strip)
 
