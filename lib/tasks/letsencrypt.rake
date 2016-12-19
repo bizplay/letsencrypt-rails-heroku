@@ -72,7 +72,7 @@ namespace :letsencrypt do
         puts  "Problem verifying challenge."
         abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
       else
-        print "Done!"
+        puts  "Done!"
       end
 
       puts ""
