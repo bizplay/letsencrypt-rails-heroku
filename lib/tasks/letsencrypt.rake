@@ -60,12 +60,19 @@ namespace :letsencrypt do
       challenge.request_verification # => true
       challenge.verify_status # => 'pending'
 
-      sleep(3)
-      puts "Done!"
+      sleep(1)
+      count_down = 7
+      while challenge.verify_status == 'pending' && count_down > 0
+        print "\nGiving LetsEncrypt some more time (to verify)..." unless count_down == 7
+        sleep(2)
+        count_down -= 1
+      end
 
       unless challenge.verify_status == 'valid'
-        puts "Problem verifying challenge."
+        puts  "Problem verifying challenge."
         abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
+      else
+        print "Done!"
       end
 
       puts ""
