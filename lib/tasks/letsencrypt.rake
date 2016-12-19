@@ -29,10 +29,11 @@ namespace :letsencrypt do
     puts ""
 
     domains = Letsencrypt.configuration.acme_domain.split(',').map(&:strip)
+    nr_domains = domain.count
 
     begin
-      domains.each do |domain|
-        puts "Performing verification for #{domain}:"
+      domains.each_with_index do |domain, index|
+        puts "Performing verification for #{domain} (#{index}/nr_domains):"
 
         authorization = client.authorize(domain: domain)
         challenge = authorization.http01
