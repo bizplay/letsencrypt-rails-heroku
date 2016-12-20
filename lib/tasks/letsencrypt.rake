@@ -19,7 +19,7 @@ namespace :letsencrypt do
     # Create a private key
     print "Creating account key..."
     private_key = OpenSSL::PKey::RSA.new(4096)
-    puts "Done!"
+    puts " Done!"
 
     client = Acme::Client.new(private_key: private_key, endpoint: Letsencrypt.configuration.acme_endpoint, connection_options: { request: { open_timeout: 5, timeout: 5 } })
 
@@ -27,7 +27,7 @@ namespace :letsencrypt do
     registration = client.register(contact: "mailto:#{Letsencrypt.configuration.acme_email}")
 
     registration.agree_terms
-    puts "Done!"
+    puts " Done!"
     puts ""
 
     domains = Letsencrypt.configuration.acme_domain.split(',').map(&:strip)
@@ -45,7 +45,7 @@ namespace :letsencrypt do
           'ACME_CHALLENGE_FILENAME' => challenge.filename,
           'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
         })
-        puts "Done!"
+        puts " Done!"
 
         # Wait for request to go through
         print "Giving config vars time to change..."
@@ -128,14 +128,14 @@ namespace :letsencrypt do
           certificate_chain: certificate.fullchain_to_pem,
           private_key: certificate.request.private_key.to_pem
         })
-        puts "Done!"
+        puts " Done!"
       else
         print "Adding new certificate..."
         heroku.sni_endpoint.create(heroku_app, {
           certificate_chain: certificate.fullchain_to_pem,
           private_key: certificate.request.private_key.to_pem
         })
-        puts "Done!"
+        puts " Done!"
       end
     rescue Excon::Error::UnprocessableEntity => e
       warn "Error adding certificate to Heroku. Response from Heroku’s API follows:"
