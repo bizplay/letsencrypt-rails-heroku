@@ -63,6 +63,8 @@ namespace :letsencrypt do
         # end
         puts "challenge.filename: #{challenge.filename} ENV[ACME_CHALLENGE_FILENAME]: #{ENV['ACME_CHALLENGE_FILENAME']}"
         puts "challenge.file_content: #{challenge.file_content} ENV[ACME_CHALLENGE_FILE_CONTENT]: #{ENV['ACME_CHALLENGE_FILE_CONTENT']}"
+        envs = heroku.config_var.info(heroku_app)
+        puts "envs[ACME_CHALLENGE_FILE_CONTENT]: #{envs['ACME_CHALLENGE_FILE_CONTENT']} envs[ACME_CHALLENGE_FILE_CONTENT]: #{envs['ACME_CHALLENGE_FILE_CONTENT']}"
 
         # Wait for app to come up
         print "Testing filename works (to bring up app)..."
