@@ -83,8 +83,8 @@ namespace :letsencrypt do
     rescue Acme::Client::Error => e
       warn "Error Acme client error:"
       heroku.config_var.update(heroku_app, {
-        'ACME_CHALLENGE_FILENAME' => "",
-        'ACME_CHALLENGE_FILE_CONTENT' => ""
+        'ACME_CHALLENGE_FILENAME' => nil,
+        'ACME_CHALLENGE_FILE_CONTENT' => nil
       })
       abort e.response.body
     end
