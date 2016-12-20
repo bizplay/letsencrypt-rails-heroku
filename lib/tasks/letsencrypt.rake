@@ -7,6 +7,8 @@ namespace :letsencrypt do
 
   desc 'Renew your LetsEncrypt certificate'
   task :renew do
+    max_number_retries = 5
+    
     # Check configuration looks OK
     abort "letsencrypt-rails-heroku is configured incorrectly. Are you missing an environment variable or other configuration? You should have a heroku_token, heroku_app, acmp_email and acme_domain configured either via a `Letsencrypt.configure` block in an initializer or as environment variables." unless Letsencrypt.configuration.valid?
 
@@ -47,8 +49,18 @@ namespace :letsencrypt do
 
         # Wait for request to go through
         print "Giving config vars time to change..."
-        sleep(5)
-        puts "Done!"
+        sleep(1)
+        count_down = max_number_retries
+        while ENV["ACME_CHALLENGE_FILENAME"] != challenge.filename && ENV["ACME_CHALLENGE_FILE_CONTENT"] != challenge.file_content && count_down > 0
+          print "."
+          sleep(2)
+          count_down -= 1
+        end
+        if ENV["ACME_CHALLENGE_FILENAME"] != challenge.filename || ENV["ACME_CHALLENGE_FILE_CONTENT"] != challenge.file_content
+          puts " Error config vars not set!"
+        else
+          puts " Done!"
+        end
 
         # Wait for app to come up
         print "Testing filename works (to bring up app)..."
@@ -56,26 +68,26 @@ namespace :letsencrypt do
         # Get the domain name from Heroku
         hostname = heroku.domain.list(heroku_app).first['hostname']
         open("http://#{hostname}/#{challenge.filename}").read
-        puts "Done!"
+        puts " Done!"
 
-        print "Giving LetsEncrypt some time to verify..."
-        # Once you are ready to serve the confirmation request you can proceed.
         challenge.request_verification # => true
         challenge.verify_status # => 'pending'
 
+        # Once you are ready to serve the confirmation request you can proceed.
+        print "Giving LetsEncrypt some time to verify..."
         sleep(1)
-        count_down = 5
+        count_down = max_number_retries
         while challenge.verify_status == 'pending' && count_down > 0
-          print "\nGiving LetsEncrypt some more time (to verify)..." unless count_down == 5
+          print "."
           sleep(2)
           count_down -= 1
         end
 
-        unless challenge.verify_status == 'valid'
-          puts  "Problem verifying challenge."
+        if challenge.verify_status != 'valid'
+          puts  " Problem verifying challenge."
           abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
         else
-          puts  "Done!"
+          puts  " Done!"
         end
 
         puts ""
