@@ -49,18 +49,20 @@ namespace :letsencrypt do
 
         # Wait for request to go through
         print "Giving config vars time to change..."
-        sleep(1)
-        count_down = max_number_retries
-        while ENV["ACME_CHALLENGE_FILENAME"] != challenge.filename && ENV["ACME_CHALLENGE_FILE_CONTENT"] != challenge.file_content && count_down > 0
-          print "."
-          sleep(2)
-          count_down -= 1
-        end
-        if ENV["ACME_CHALLENGE_FILENAME"] != challenge.filename || ENV["ACME_CHALLENGE_FILE_CONTENT"] != challenge.file_content
-          puts " Error config vars not set!"
-        else
+        sleep(5)
+        # count_down = max_number_retries
+        # while ENV["ACME_CHALLENGE_FILENAME"] != challenge.filename && ENV["ACME_CHALLENGE_FILE_CONTENT"] != challenge.file_content && count_down > 0
+        #   print "."
+        #   sleep(2)
+        #   count_down -= 1
+        # end
+        # if ENV["ACME_CHALLENGE_FILENAME"] != challenge.filename || ENV["ACME_CHALLENGE_FILE_CONTENT"] != challenge.file_content
+        #   puts " Error config vars not set!"
+        # else
           puts " Done!"
-        end
+        # end
+        puts "challenge.filename: #{challenge.filename} ENV[ACME_CHALLENGE_FILENAME]: #{ENV['ACME_CHALLENGE_FILENAME']}"
+        puts "challenge.file_content: #{challenge.file_content} ENV[ACME_CHALLENGE_FILE_CONTENT]: #{ENV['ACME_CHALLENGE_FILE_CONTENT']}"
 
         # Wait for app to come up
         print "Testing filename works (to bring up app)..."
