@@ -33,7 +33,7 @@ namespace :letsencrypt do
 
     begin
       domains.each_with_index do |domain, index|
-        puts "Performing verification for #{domain} (#{index}/nr_domains):"
+        puts "Performing verification for #{domain} (#{index+1}/#{nr_domains}):"
 
         authorization = client.authorize(domain: domain)
         challenge = authorization.http01
