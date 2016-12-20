@@ -29,7 +29,7 @@ namespace :letsencrypt do
     puts ""
 
     domains = Letsencrypt.configuration.acme_domain.split(',').map(&:strip)
-    nr_domains = domain.count
+    nr_domains = domains.count
 
     begin
       domains.each_with_index do |domain, index|
