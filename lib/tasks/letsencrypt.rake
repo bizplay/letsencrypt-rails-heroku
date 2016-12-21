@@ -40,75 +40,89 @@ namespace :letsencrypt do
         authorization = client.authorize(domain: domain)
         challenge = authorization.http01
 
-        print "Setting config vars on Heroku..."
-        heroku.config_var.update(heroku_app, {
-          'ACME_CHALLENGE_FILENAME' => challenge.filename,
-          'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
-        })
+        # print "Setting config vars on Heroku..."
+        # heroku.config_var.update(heroku_app, {
+        #   'ACME_CHALLENGE_FILENAME' => challenge.filename,
+        #   'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
+        # })
+        # puts " Done!"
+        print "Setting Letsencryptconfiguration vars..."
+        Letsencrypt.configuration.acme_challenge_filename= challenge.filename
+        Letsencrypt.configuration.acme_challenge_file_content= challenge.file_content
         puts " Done!"
 
         # Wait for request to go through
-        print "Giving config vars time to change..."
-        sleep(1)
-        count_down = max_number_retries
-        envs = heroku.config_var.info(heroku_app)
-        while envs["ACME_CHALLENGE_FILENAME"] != challenge.filename && envs["ACME_CHALLENGE_FILE_CONTENT"] != challenge.file_content && count_down > 0
-          print "."
-          sleep(2)
-          count_down -= 1
-          envs = heroku.config_var.info(heroku_app)
-        end
-        if envs["ACME_CHALLENGE_FILENAME"] != challenge.filename || envs["ACME_CHALLENGE_FILE_CONTENT"] != challenge.file_content
-          puts " Error config vars not set!"
-        else
-          puts " Done!"
-        end
+#        print "Giving config vars time to change..."
+#        sleep(30)
+        # count_down = max_number_retries
+        # envs = heroku.config_var.info(heroku_app)
+        # while envs["ACME_CHALLENGE_FILENAME"] != challenge.filename && envs["ACME_CHALLENGE_FILE_CONTENT"] != challenge.file_content && count_down > 0
+        #   print "."
+        #   sleep(2)
+        #   count_down -= 1
+        #   envs = heroku.config_var.info(heroku_app)
+        # end
+#        puts " Done!"
+#        envs = heroku.config_var.info(heroku_app)
+#        if envs["ACME_CHALLENGE_FILENAME"] != challenge.filename || envs["ACME_CHALLENGE_FILE_CONTENT"] != challenge.file_content
+#          puts " Error config vars not set!"
+#        else
+#          puts " Config vars set correctly"
+          # puts " Done!"
+#        end
 
         # Wait for app to come up
         print "Testing filename works (to bring up app)..."
-
         # Get the domain name from Heroku
         hostname = heroku.domain.list(heroku_app).first['hostname']
         open("http://#{hostname}/#{challenge.filename}").read
         puts " Done!"
 
-        challenge.request_verification # => true
-        challenge.verify_status # => 'pending'
+        verification_status = 'invalid'
+        count_down = 3
+        while verification_status != 'valid' || count_down > 0
+          challenge.request_verification # => true
+          challenge.verify_status # => 'pending'
 
-        # Once you are ready to serve the confirmation request you can proceed.
-        print "Giving LetsEncrypt some time to verify..."
-        sleep(1)
-        count_down = max_number_retries
-        while challenge.verify_status == 'pending' && count_down > 0
-          print "."
-          sleep(2)
+          # Once you are ready to serve the confirmation request you can proceed.
+          print "Giving LetsEncrypt some time to verify..."
+          sleep(1)
+          count_down = max_number_retries
+          while challenge.verify_status == 'pending' && count_down > 0
+            print "."
+            sleep(2)
+            count_down -= 1
+          end
+          if challenge.verify_status != 'valid'
+            puts  " Problem verifying challenge."
+            abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
+          else
+            puts  " Done!"
+          end
+          puts ""
+          verification_status = challenge.verify_status
+          
+          if verification_status != 'valid'
+            challenge = authorization.http01
+          end
           count_down -= 1
-        end
-
-        if challenge.verify_status != 'valid'
-          puts  " Problem verifying challenge."
-          abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
-        else
-          puts  " Done!"
-        end
-
-        puts ""
+        end 
       end
     rescue Acme::Client::Error => e
       warn "Error Acme client error:"
-      heroku.config_var.update(heroku_app, {
-        'ACME_CHALLENGE_FILENAME' => nil,
-        'ACME_CHALLENGE_FILE_CONTENT' => nil
-      })
+      # heroku.config_var.update(heroku_app, {
+      #   'ACME_CHALLENGE_FILENAME' => nil,
+      #   'ACME_CHALLENGE_FILE_CONTENT' => nil
+      # })
       abort e.response.body
     end
 
     # Unset temporary config vars. We don't care about waiting for this to
     # restart
-    heroku.config_var.update(heroku_app, {
-      'ACME_CHALLENGE_FILENAME' => nil,
-      'ACME_CHALLENGE_FILE_CONTENT' => nil
-    })
+    # heroku.config_var.update(heroku_app, {
+    #   'ACME_CHALLENGE_FILENAME' => nil,
+    #   'ACME_CHALLENGE_FILE_CONTENT' => nil
+    # })
 
     # Create CSR
     csr = Acme::Client::CertificateRequest.new(names: domains)
