@@ -46,10 +46,14 @@ namespace :letsencrypt do
         #   'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
         # })
         # puts " Done!"
+        puts "Letsencrypt.configuration.acme_challenge_filename: #{Letsencrypt.configuration.acme_challenge_filename}"
+        puts "Letsencrypt.configuration.acme_challenge_file_content: #{Letsencrypt.configuration.acme_challenge_file_content}"
         print "Setting Letsencryptconfiguration vars..."
         Letsencrypt.configuration.acme_challenge_filename= challenge.filename
         Letsencrypt.configuration.acme_challenge_file_content= challenge.file_content
         puts " Done!"
+        puts "Letsencrypt.configuration.acme_challenge_filename: #{Letsencrypt.configuration.acme_challenge_filename}"
+        puts "Letsencrypt.configuration.acme_challenge_file_content: #{Letsencrypt.configuration.acme_challenge_file_content}"
 
         # Wait for request to go through
 #        print "Giving config vars time to change..."
@@ -75,35 +79,38 @@ namespace :letsencrypt do
         print "Testing filename works (to bring up app)..."
         # Get the domain name from Heroku
         hostname = heroku.domain.list(heroku_app).first['hostname']
+        print "\nopening: http://#{hostname}/#{challenge.filename}"
         open("http://#{hostname}/#{challenge.filename}").read
         puts " Done!"
 
         verification_status = 'invalid'
-        count_down = 3
+        count_down = 2
         while verification_status != 'valid' || count_down > 0
-          challenge.request_verification # => true
-          challenge.verify_status # => 'pending'
+          response_success = challenge.request_verification # => true
+          verification_status = challenge.verify_status # => 'pending'
+          puts "response_success: #{response_success}"
+          puts "verification_status: #{verification_status}"
+          puts "challenge.status: #{challenge.status}"
 
           # Once you are ready to serve the confirmation request you can proceed.
-          print "Giving LetsEncrypt some time to verify..."
-          sleep(1)
-          count_down = max_number_retries
-          while challenge.verify_status == 'pending' && count_down > 0
-            print "."
-            sleep(2)
-            count_down -= 1
-          end
-          if challenge.verify_status != 'valid'
+#          print "Giving LetsEncrypt some time to verify..."
+#          sleep(1)
+#          count_down = max_number_retries
+#          while challenge.verify_status == 'pending' && count_down > 0
+#            print "."
+#            sleep(2)
+#            count_down -= 1
+#          end
+          if challenge.status != 'valid'
             puts  " Problem verifying challenge."
             abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
           else
             puts  " Done!"
           end
           puts ""
-          verification_status = challenge.verify_status
           
           if verification_status != 'valid'
-            challenge = authorization.http01
+#            challenge = authorization.http01
           end
           count_down -= 1
         end 
