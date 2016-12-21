@@ -8,7 +8,7 @@ namespace :letsencrypt do
   desc 'Renew your LetsEncrypt certificate'
   task :renew do
     max_request_verification_retries = 2
-    max_verify_retries = 5
+    max_verify_retries = 7
     
     # Check configuration looks OK
     abort "letsencrypt-rails-heroku is configured incorrectly. Are you missing an environment variable or other configuration? You should have a heroku_token, heroku_app, acmp_email and acme_domain configured either via a `Letsencrypt.configure` block in an initializer or as environment variables." unless Letsencrypt.configuration.valid?
@@ -53,8 +53,8 @@ namespace :letsencrypt do
         Letsencrypt.configuration.acme_challenge_filename= challenge.filename
         Letsencrypt.configuration.acme_challenge_file_content= challenge.file_content
         puts " Done!"
-#        puts "Letsencrypt.configuration.acme_challenge_filename: #{Letsencrypt.configuration.acme_challenge_filename}"
-#        puts "Letsencrypt.configuration.acme_challenge_file_content: #{Letsencrypt.configuration.acme_challenge_file_content}"
+        puts "Letsencrypt.configuration.acme_challenge_filename: #{Letsencrypt.configuration.acme_challenge_filename}"
+        puts "Letsencrypt.configuration.acme_challenge_file_content: #{Letsencrypt.configuration.acme_challenge_file_content}"
 
         # Wait for request to go through
 #        print "Giving config vars time to change..."
@@ -101,13 +101,14 @@ namespace :letsencrypt do
           end
           if challenge.status != 'valid'
             puts  " Problem verifying challenge."
+            puts  "challenge.error[status]: #{challenge.error['status']}"
             abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
           else
             puts  " Done!"
           end
           puts ""
           
-          if challenge.status != 'valid' && challenge.error =~ /400/
+          if challenge.status != 'valid' && challenge.error["status"].to_i > 399 && challenge.error["status"].to_i < 500
             challenge = authorization.http01
           end
           verification_status = challenge.status
