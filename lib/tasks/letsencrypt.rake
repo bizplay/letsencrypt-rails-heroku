@@ -8,7 +8,7 @@ namespace :letsencrypt do
   desc 'Renew your LetsEncrypt certificate'
   task :renew do
     max_request_verification_retries = 2
-    max_verify_retries = 7
+    max_verify_retries = 15
     
     # Check configuration looks OK
     abort "letsencrypt-rails-heroku is configured incorrectly. Are you missing an environment variable or other configuration? You should have a heroku_token, heroku_app, acmp_email and acme_domain configured either via a `Letsencrypt.configure` block in an initializer or as environment variables." unless Letsencrypt.configuration.valid?
@@ -102,15 +102,15 @@ namespace :letsencrypt do
           end
           if challenge.status != 'valid'
             puts  " Problem verifying challenge."
-            puts  "challenge.error[status]: #{challenge.error['status']}"
-            puts "Status: #{challenge.verify_status}, Error: #{challenge.error}"
-            # abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
+            puts "Status: #{challenge.status}, Error: #{challenge.error}"
+            puts  "challenge.error[status]: #{challenge.error['status']}" if challenge.error
+            # abort "Status: #{challenge.status}, Error: #{challenge.error}"
           else
             puts  " Done!"
           end
           puts ""
           
-          if challenge.status != 'valid' && challenge.error["status"].to_i > 399 && challenge.error["status"].to_i < 500
+          if challenge.status != 'valid' && challenge.error && challenge.error["status"].to_i > 399 && challenge.error["status"].to_i < 500
             challenge = authorization.http01
           end
           verification_status = challenge.status
