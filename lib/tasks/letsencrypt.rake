@@ -7,7 +7,8 @@ namespace :letsencrypt do
 
   desc 'Renew your LetsEncrypt certificate'
   task :renew do
-    max_number_retries = 5
+    max_request_verification_retries = 2
+    max_verify_retries = 5
     
     # Check configuration looks OK
     abort "letsencrypt-rails-heroku is configured incorrectly. Are you missing an environment variable or other configuration? You should have a heroku_token, heroku_app, acmp_email and acme_domain configured either via a `Letsencrypt.configure` block in an initializer or as environment variables." unless Letsencrypt.configuration.valid?
@@ -46,14 +47,14 @@ namespace :letsencrypt do
         #   'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
         # })
         # puts " Done!"
-        puts "Letsencrypt.configuration.acme_challenge_filename: #{Letsencrypt.configuration.acme_challenge_filename}"
-        puts "Letsencrypt.configuration.acme_challenge_file_content: #{Letsencrypt.configuration.acme_challenge_file_content}"
+#        puts "Letsencrypt.configuration.acme_challenge_filename: #{Letsencrypt.configuration.acme_challenge_filename}"
+#        puts "Letsencrypt.configuration.acme_challenge_file_content: #{Letsencrypt.configuration.acme_challenge_file_content}"
         print "Setting Letsencryptconfiguration vars..."
         Letsencrypt.configuration.acme_challenge_filename= challenge.filename
         Letsencrypt.configuration.acme_challenge_file_content= challenge.file_content
         puts " Done!"
-        puts "Letsencrypt.configuration.acme_challenge_filename: #{Letsencrypt.configuration.acme_challenge_filename}"
-        puts "Letsencrypt.configuration.acme_challenge_file_content: #{Letsencrypt.configuration.acme_challenge_file_content}"
+#        puts "Letsencrypt.configuration.acme_challenge_filename: #{Letsencrypt.configuration.acme_challenge_filename}"
+#        puts "Letsencrypt.configuration.acme_challenge_file_content: #{Letsencrypt.configuration.acme_challenge_file_content}"
 
         # Wait for request to go through
 #        print "Giving config vars time to change..."
@@ -84,23 +85,20 @@ namespace :letsencrypt do
         puts " Done!"
 
         verification_status = 'invalid'
-        count_down = 2
-        while verification_status != 'valid' || count_down > 0
-          response_success = challenge.request_verification # => true
+        request_verification_retries = max_request_verification_retries
+        while verification_status != 'valid' || request_verification_retries > 0
+          challenge.request_verification # => true
           verification_status = challenge.verify_status # => 'pending'
-          puts "response_success: #{response_success}"
-          puts "verification_status: #{verification_status}"
-          puts "challenge.status: #{challenge.status}"
 
           # Once you are ready to serve the confirmation request you can proceed.
-#          print "Giving LetsEncrypt some time to verify..."
-#          sleep(1)
-#          count_down = max_number_retries
-#          while challenge.verify_status == 'pending' && count_down > 0
-#            print "."
-#            sleep(2)
-#            count_down -= 1
-#          end
+          print "Giving LetsEncrypt some time to verify..."
+          sleep(1)
+          verify_retries = max_number_retries
+          while challenge.status == 'pending' && verify_retries > 0
+            print "."
+            sleep(2)
+            verify_retries -= 1
+          end
           if challenge.status != 'valid'
             puts  " Problem verifying challenge."
             abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
@@ -109,10 +107,11 @@ namespace :letsencrypt do
           end
           puts ""
           
-          if verification_status != 'valid'
-#            challenge = authorization.http01
+          if challenge.status != 'valid' && challenge.error =~ /400/
+            challenge = authorization.http01
           end
-          count_down -= 1
+          verification_status = challenge.status
+          request_verification_retries -= 1
         end 
       end
     rescue Acme::Client::Error => e
