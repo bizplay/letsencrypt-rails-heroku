@@ -93,7 +93,7 @@ namespace :letsencrypt do
           # Once you are ready to serve the confirmation request you can proceed.
           print "Giving LetsEncrypt some time to verify..."
           sleep(1)
-          verify_retries = max_number_retries
+          verify_retries = max_verify_retries 
           while challenge.status == 'pending' && verify_retries > 0
             print "."
             sleep(2)
