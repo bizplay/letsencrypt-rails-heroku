@@ -8,7 +8,7 @@ namespace :letsencrypt do
   desc 'Renew your LetsEncrypt certificate'
   task :renew do
     max_request_verification_retries = 2
-    max_verify_retries = 15
+    max_verify_retries = 3
     
     # Check configuration looks OK
     abort "letsencrypt-rails-heroku is configured incorrectly. Are you missing an environment variable or other configuration? You should have a heroku_token, heroku_app, acmp_email and acme_domain configured either via a `Letsencrypt.configure` block in an initializer or as environment variables." unless Letsencrypt.configuration.valid?
@@ -22,7 +22,7 @@ namespace :letsencrypt do
     private_key = OpenSSL::PKey::RSA.new(4096)
     puts " Done!"
 
-    client = Acme::Client.new(private_key: private_key, endpoint: Letsencrypt.configuration.acme_endpoint, connection_options: { request: { open_timeout: 5, timeout: 5 } })
+    client = Acme::Client.new(private_key: private_key, endpoint: Letsencrypt.configuration.acme_endpoint, connection_options: { request: { open_timeout: 10, timeout: 10 } })
 
     print "Registering with LetsEncrypt..."
     registration = client.register(contact: "mailto:#{Letsencrypt.configuration.acme_email}")
@@ -93,11 +93,11 @@ namespace :letsencrypt do
 
           # Once you are ready to serve the confirmation request you can proceed.
           print "Giving LetsEncrypt some time to verify..."
-          sleep(1)
+          sleep(5)
           verify_retries = max_verify_retries 
-          while challenge.status == 'pending' && verify_retries > 0
+          while challenge.verify_status == 'pending' && verify_retries > 0
             print "."
-            sleep(2)
+            sleep(3)
             verify_retries -= 1
           end
           if challenge.status != 'valid'
@@ -112,8 +112,12 @@ namespace :letsencrypt do
           
           if challenge.status != 'valid' && challenge.error && challenge.error["status"].to_i > 399 && challenge.error["status"].to_i < 500
             challenge = authorization.http01
+            verification_status = challenge.status
+          elsif challenge.status != 'valid'
+            abort "Status: #{challenge.status}, Error: #{challenge.error}"
+          else
+            verification_status = challenge.status
           end
-          verification_status = challenge.status
           request_verification_retries -= 1
         end 
       end
