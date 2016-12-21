@@ -87,6 +87,7 @@ namespace :letsencrypt do
         verification_status = 'invalid'
         request_verification_retries = max_request_verification_retries
         while verification_status != 'valid' || request_verification_retries > 0
+          puts  "Attempt ##{max_request_verification_retries - request_verification_retries + 1}"
           challenge.request_verification # => true
           verification_status = challenge.verify_status # => 'pending'
 
@@ -102,7 +103,8 @@ namespace :letsencrypt do
           if challenge.status != 'valid'
             puts  " Problem verifying challenge."
             puts  "challenge.error[status]: #{challenge.error['status']}"
-            abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
+            puts "Status: #{challenge.verify_status}, Error: #{challenge.error}"
+            # abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
           else
             puts  " Done!"
           end
