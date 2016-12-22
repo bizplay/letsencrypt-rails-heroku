@@ -49,7 +49,8 @@ namespace :letsencrypt do
       #   'ACME_CHALLENGE_FILENAME' => challenge.filename,
       #   'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
       # })
-      connection.post '/acme-challenge-response', { :challenge_reponse => challenge.file_content }
+      puts "post: challenge_response=#{challenge.file_content}"
+      connection.post '/acme-challenge-response', { :challenge_response => challenge.file_content }
       puts "Done!"
 
       # Wait for request to go through
@@ -65,11 +66,13 @@ namespace :letsencrypt do
       # open("http://#{hostname}/#{challenge.filename}").read
       # puts "Done!"
 
-      print "Giving LetsEncrypt some time to verify..."
+      print "Sending LetsEncrypt request verification..."
       # Once you are ready to serve the confirmation request you can proceed.
       challenge.request_verification # => true
       challenge.verify_status # => 'pending'
+      puts "Done!"
 
+      print "Giving LetsEncrypt some time to verify..."
       sleep(13)
       puts "Done!"
 
