@@ -53,24 +53,24 @@ namespace :letsencrypt do
       puts "Done!"
 
       # Wait for request to go through
-      print "Giving config vars time to change..."
-      sleep(5)
-      puts "Done!"
+      # print "Giving config vars time to change..."
+      # sleep(5)
+      # puts "Done!"
 
       # Wait for app to come up
-      print "Testing filename works (to bring up app)..."
-
-      # Get the domain name from Heroku
-      hostname = heroku.domain.list(heroku_app).first['hostname']
-      open("http://#{hostname}/#{challenge.filename}").read
-      puts "Done!"
+      # print "Testing filename works (to bring up app)..."
+      #
+      # # Get the domain name from Heroku
+      # hostname = heroku.domain.list(heroku_app).first['hostname']
+      # open("http://#{hostname}/#{challenge.filename}").read
+      # puts "Done!"
 
       print "Giving LetsEncrypt some time to verify..."
       # Once you are ready to serve the confirmation request you can proceed.
       challenge.request_verification # => true
       challenge.verify_status # => 'pending'
 
-      sleep(10)
+      sleep(13)
       puts "Done!"
 
       unless challenge.verify_status == 'valid'
@@ -78,8 +78,6 @@ namespace :letsencrypt do
         abort "Status: #{challenge.verify_status}, Error: #{challenge.error}"
       end
       puts ""
-      # wait some time for all dyno's to settle down before restarting them again (setting env vars restarts the dynos)
-      sleep(60)
     end
 
     # Unset temporary config vars. We don't care about waiting for this to
