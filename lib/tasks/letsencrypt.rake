@@ -27,8 +27,17 @@ namespace :letsencrypt do
     registration.agree_terms
     puts "Done!"
 
-    domains = Letsencrypt.configuration.acme_domain.split(',').map(&:strip)
+    # set up connection to post challenge reponse to the app
+    if ENV["LETSENCRYPT_CHALLENGE_SERVER"].nil? || ENV["LETSENCRYPT_CHALLENGE_SERVER"].strip.length == 0
+      abort "Error: LETSENCRYPT_CHALLENGE_SERVER not set!"
+    end
+    connection = Faraday.new(:url => ENV["LETSENCRYPT_CHALLENGE_SERVER"]) do |faraday|
+      faraday.request  :url_encoded             # form-encode POST params
+      faraday.response :logger                  # log requests to STDOUT
+      faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
+    end
 
+    domains = Letsencrypt.configuration.acme_domain.split(',').map(&:strip)
     domains.each do |domain|
       puts "Performing verification for #{domain}:"
 
@@ -36,10 +45,11 @@ namespace :letsencrypt do
       challenge = authorization.http01
 
       print "Setting config vars on Heroku..."
-      heroku.config_var.update(heroku_app, {
-        'ACME_CHALLENGE_FILENAME' => challenge.filename,
-        'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
-      })
+      # heroku.config_var.update(heroku_app, {
+      #   'ACME_CHALLENGE_FILENAME' => challenge.filename,
+      #   'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
+      # })
+      connection.post '/acme-challenge-response', { :reponse => challenge.file_content }
       puts "Done!"
 
       # Wait for request to go through
@@ -74,10 +84,10 @@ namespace :letsencrypt do
 
     # Unset temporary config vars. We don't care about waiting for this to
     # restart
-    heroku.config_var.update(heroku_app, {
-      'ACME_CHALLENGE_FILENAME' => nil,
-      'ACME_CHALLENGE_FILE_CONTENT' => nil
-    })
+    # heroku.config_var.update(heroku_app, {
+    #   'ACME_CHALLENGE_FILENAME' => nil,
+    #   'ACME_CHALLENGE_FILE_CONTENT' => nil
+    # })
 
     # Create CSR
     csr = Acme::Client::CertificateRequest.new(names: domains)
@@ -86,7 +96,7 @@ namespace :letsencrypt do
     certificate = client.new_certificate(csr) # => #<Acme::Client::Certificate ....>
 
     # Send certificates to Heroku via API
-    
+
     # First check for existing certificates:
     certificates = heroku.sni_endpoint.list(heroku_app)
 
