@@ -44,12 +44,12 @@ namespace :letsencrypt do
       authorization = client.authorize(domain: domain)
       challenge = authorization.http01
 
-      print "Setting config vars on Heroku..."
+      puts "Setting config vars on Heroku..."
       # heroku.config_var.update(heroku_app, {
       #   'ACME_CHALLENGE_FILENAME' => challenge.filename,
       #   'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
       # })
-      connection.post '/acme-challenge-response', { :reponse => challenge.file_content }
+      connection.post '/acme-challenge-response', { :challenge_reponse => challenge.file_content }
       puts "Done!"
 
       # Wait for request to go through
