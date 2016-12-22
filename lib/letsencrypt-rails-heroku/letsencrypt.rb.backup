@@ -15,10 +15,10 @@ module Letsencrypt
   end
 
   class Configuration
-    attr_accessor :heroku_token, :heroku_app, :acme_email, :acme_domain, :acme_endpoint
+    attr_accessor :heroku_token, :heroku_app, :acme_email, :acme_domain, :acme_endpoint, :acme_challenge_filename, :acme_challenge_file_content
     
     # Not settable by user; part of the gem's behaviour.
-    attr_reader :acme_challenge_filename, :acme_challenge_file_content
+    # attr_reader :acme_challenge_filename, :acme_challenge_file_content
 
     def initialize
       @heroku_token = ENV["HEROKU_TOKEN"]
