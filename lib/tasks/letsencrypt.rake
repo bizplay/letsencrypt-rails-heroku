@@ -33,38 +33,22 @@ namespace :letsencrypt do
     end
     connection = Faraday.new(:url => ENV["LETSENCRYPT_CHALLENGE_SERVER"]) do |faraday|
       faraday.request  :url_encoded             # form-encode POST params
-      faraday.response :logger                  # log requests to STDOUT
+      # faraday.response :logger                  # log requests to STDOUT
       faraday.adapter  Faraday.default_adapter  # make requests with Net::HTTP
     end
 
     domains = Letsencrypt.configuration.acme_domain.split(',').map(&:strip)
-    domains.each do |domain|
-      puts "Performing verification for #{domain}:"
+    nr_domains=domains.length
+    domains.each_with_index do |domain, index|
+      puts "Performing verification for #{domain} (#{index+1}/#{nr_domains}):"
 
       authorization = client.authorize(domain: domain)
       challenge = authorization.http01
 
       puts "Setting config vars on Heroku..."
-      # heroku.config_var.update(heroku_app, {
-      #   'ACME_CHALLENGE_FILENAME' => challenge.filename,
-      #   'ACME_CHALLENGE_FILE_CONTENT' => challenge.file_content
-      # })
       puts "post: challenge_response=#{challenge.file_content}"
       connection.post '/acme-challenge-response', { :challenge_response => challenge.file_content }
       puts "Done!"
-
-      # Wait for request to go through
-      # print "Giving config vars time to change..."
-      # sleep(5)
-      # puts "Done!"
-
-      # Wait for app to come up
-      # print "Testing filename works (to bring up app)..."
-      #
-      # # Get the domain name from Heroku
-      # hostname = heroku.domain.list(heroku_app).first['hostname']
-      # open("http://#{hostname}/#{challenge.filename}").read
-      # puts "Done!"
 
       print "Sending LetsEncrypt request verification..."
       # Once you are ready to serve the confirmation request you can proceed.
@@ -82,13 +66,6 @@ namespace :letsencrypt do
       end
       puts ""
     end
-
-    # Unset temporary config vars. We don't care about waiting for this to
-    # restart
-    # heroku.config_var.update(heroku_app, {
-    #   'ACME_CHALLENGE_FILENAME' => nil,
-    #   'ACME_CHALLENGE_FILE_CONTENT' => nil
-    # })
 
     # Create CSR
     csr = Acme::Client::CertificateRequest.new(names: domains)
@@ -121,7 +98,5 @@ namespace :letsencrypt do
       warn "Error adding certificate to Heroku. Response from Heroku’s API follows:"
       abort e.response.body
     end
-
   end
-
 end
